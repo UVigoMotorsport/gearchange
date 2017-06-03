@@ -63,6 +63,13 @@ int addr_SPOSGEARUP = addr_SPOSGEARHALFUP + sizeof(SPOSGEARUP);
 int SPOSGEARDOWN = 100;
 int addr_SPOSGEARDOWN = addr_SPOSGEARUP + sizeof(SPOSGEARUP);
 
+int BADCHANGE = 0;
+unsigned long CHANGESTART = 0;
+int CHANGESTARTED = 0;
+int CURRGEARPOS = 0;
+int CHANGEPOINT = 0;
+int CHANGEPOS = 0;
+
 #define SERVOMAXMAX 2500
 #define SERVOMINMIN 500
 
@@ -127,11 +134,11 @@ void setup()
   Serial.begin(57600);
   Serial.println("hello");
   clutch.attach(9);
-  clutch.write(CSERVOMAX);
+  clutch.writeMicroseconds(CSERVOMAX);
   gearchange.attach(6);
-  gearchange.write(SGEARMID);
+  gearchange.writeMicroseconds(SGEARMID);
   delay(250);
-  if(digitalRead(12) == 1)
+  if (digitalRead(12) == 1)
   {
     OLDGEAR = 0;
   }
@@ -143,8 +150,12 @@ void setup()
 
 void loop()
 {
-  if ((millis() - GEARLAST) > 50)
+  if ((millis() - GEARLAST) > 25)
   {
+    if (!GEARCHG)
+    {
+      gearchange.writeMicroseconds(SGEARMID);
+    }
     if (RELEASE)
     {
       if (!(PIND & ((1 << PORTD2) | (1 << PORTD3))))
@@ -154,12 +165,36 @@ void loop()
     }
     else if (PIND & (1 << PORTD2))
     {
-      GEARCHG = GEARUP;
+      if (GEARCHG == 0)
+      {
+        GEARCHG = GEARUP;
+        if (GEAR < 7)
+        {
+          switch (GEAR)
+          {
+            case 0 :
+              GEAR = 2;
+              break;
+            case 1 :
+              GEAR = 3;
+              break;
+            default :
+              GEAR++;
+          }
+        }
+      }
       RELEASE = 1;
     }
     else if (PIND & (1 << PORTD3))
     {
-      GEARCHG = GEARDOWN;
+      if (GEARCHG == 0)
+      {
+        GEARCHG = GEARDOWN;
+        if (GEAR > 0)
+        {
+          GEAR--;
+        }
+      }
       RELEASE = 1;
     }
     GEARLAST = millis();
@@ -175,43 +210,107 @@ void loop()
         CLUTCHSTART = 1;
       }
     }
+    else if(BADCHANGE)
+    {
+      CLUTCH = MAX;
+      CLUTCHSTART = 0;
+    }
     else
     {
       CLUTCH = clutchpos;
     }
-    //clutch.writeMicroseconds(exptoservo(((float) (1023 - rawtoexp(1023 - CLUTCH)) / 1023.0)));
     clutch.writeMicroseconds(exptoservo((float) CLUTCH));
     CLUTCHLAST = millis();
   }
 
   if (GEARCHG != 0)
   {
-    if (GEARCHG == GEARUP)
+    CURRGEARPOS = analogRead(A2);
+    if (GEARS[GEAR] == GEARS[OLDGEAR])
     {
-      if (GEAR < 7)
+
+      GEARCHG = 0;
+    }
+    else
+    {
+      if (!CHANGESTARTED)
       {
-        switch (GEAR)
+        if (GEARS[GEAR] == 'N' && GEARS[OLDGEAR] == '1')
         {
-          case 0 :
-            GEAR = 2;
-            break;
-          case 1 :
-            GEAR = 3;
-            break;
-          default :
-            GEAR++;
+          CHANGEPOINT = SGEARHALFUP;
+          CHANGEPOS = SPOSGEARHALFUP;
+          CHANGESTARTED = 1;
+        }
+        else if (GEARS[OLDGEAR] > GEARS[GEAR])
+        {
+          CHANGEPOINT = SGEARDOWN;
+          CHANGEPOS = SPOSGEARDOWN;
+          CHANGESTARTED = 1;
+        }
+        else if (GEARS[OLDGEAR] < GEARS[GEAR])
+        {
+          CHANGEPOINT = SGEARUP;
+          CHANGEPOS = SPOSGEARUP;
+          CHANGESTARTED = 1;
+        }
+      }
+      if (CHANGESTARTED == 1)
+      {
+        gearchange.writeMicroseconds(CHANGEPOINT);
+        CHANGESTART = millis();
+        CHANGESTARTED = 2;
+      }
+      if (CHANGESTARTED == 2)
+      {
+        CURRGEARPOS = analogRead(A2);
+        if (CURRGEARPOS == CHANGEPOS || CURRGEARPOS == (CHANGEPOS + 1) || CURRGEARPOS == (CHANGEPOS - 1))
+        {
+          CHANGESTARTED = 3;
+        }
+        else
+        {
+          if ((millis() - CHANGESTART) > CHANGELIMIT)
+          {
+            CHANGESTARTED = 0;
+            GEARCHG = 0;
+            BADCHANGE = 1;
+            gearchange.writeMicroseconds(SGEARMID);
+            GEAR = OLDGEAR;
+          }
+        }
+      }
+      if (CHANGESTARTED == 3)
+      {
+        gearchange.writeMicroseconds(SGEARMID);
+        CHANGESTART = millis();
+        CHANGESTARTED = 4;
+      }
+      if (CHANGESTARTED == 4)
+      {
+        CURRGEARPOS = analogRead(A2);
+        if (CURRGEARPOS == SPOSGEARMID || CURRGEARPOS == (SPOSGEARMID + 1) || CURRGEARPOS == (SPOSGEARMID - 1))
+        {
+          CHANGESTARTED = 0;
+          OLDGEAR = GEAR;
+          GEARCHG = 0;
+          if (GEARS[GEAR] == 'N' && digitalRead(12) == 1)
+          {
+            BADCHANGE = 0;
+          }
+        }
+        else
+        {
+          if ((millis() - CHANGESTART) > CHANGELIMIT)
+          {
+            CHANGESTARTED = 0;
+            GEARCHG = 0;
+            BADCHANGE = 1;
+            gearchange.writeMicroseconds(SGEARMID);
+            GEAR = OLDGEAR;
+          }
         }
       }
     }
-    else if (GEARCHG == GEARDOWN)
-    {
-      if (GEAR > 0)
-      {
-        GEAR--;
-      }
-    }
-    gearch(GEAR);
-    GEARCHG = 0;
   }
 
   if ((millis() - TIMELAST) > 750)
@@ -244,7 +343,18 @@ void loop()
     Serial.print("Clutch real pos: ");
     Serial.println((clutchrealpos - CREALMIN) * (1.0 / (CREALMAX - CREALMIN)));
     Serial.print("Gear: [");
-    Serial.print(GEARS[GEAR]);
+    if (GEARCHG == 0)
+    {
+      Serial.print(GEARS[GEAR]);
+    }
+    else
+    {
+      Serial.print("-");
+    }
+    if (BADCHANGE == 1)
+    {
+      Serial.print("X");
+    }
     Serial.println("]");
     Serial.print("Percent exp: ");
     Serial.print(DIV * 100.0);
@@ -269,6 +379,24 @@ void loop()
     }
     switch (in)
     {
+      case 'r':
+        reset();
+        break;
+      case 'n':
+        BADCHANGE = 0;
+        GEAR = 0;
+        OLDGEAR = 0;
+        CLUTCHSTART = 0;
+        CLUTCH = MAX;
+        delay(CHANGELIMIT);
+        clutch.writeMicroseconds(exptoservo((float) CLUTCH));
+        delay(CHANGELIMIT);
+        gearchange.writeMicroseconds(SGEARMID);
+        delay(CHANGELIMIT);
+        Serial.println("Put the gearbox in neutral");
+        while(digitalRead(12) != 1);
+        delay(CHANGELIMIT);
+        break;
       case 'e' :
         if (FLAG == EXPCHG)
         {
@@ -784,133 +912,6 @@ void set()
   Serial.println("Exiting Servo set mode");
 }
 
-void gearch(unsigned char gear)
-{
-  int BADCHANGE = 0;
-  int currgearpos = analogRead(A2);
-  if (GEARS[gear] == GEARS[OLDGEAR])
-  {
-    return;
-  }
-  else
-  {
-    if (GEARS[gear] == 'N')
-    {
-      if (GEARS[OLDGEAR] == '2')
-      {
-        gearchange.write(SGEARHALFDOWN);
-        unsigned long int changestart = millis();
-        while(currgearpos != SPOSGEARHALFDOWN)
-        {
-          if((millis() - changestart) > CHANGELIMIT)
-          {
-            BADCHANGE = 1;
-            break;
-          }
-          currgearpos = analogRead(A2);
-        }
-        gearchange.write(SGEARMID);
-        while(currgearpos != SPOSGEARMID)
-        {
-          currgearpos = analogRead(A2);
-        }
-        if(BADCHANGE)
-        {
-          GEAR = OLDGEAR;
-        }
-        else
-        {
-          OLDGEAR = gear;
-        }
-      }
-      else if (GEARS[OLDGEAR] == '1')
-      {
-        gearchange.write(SGEARHALFUP);
-        unsigned long int changestart = millis();
-        while(currgearpos != SPOSGEARHALFUP)
-        {
-          if((millis() - changestart) > CHANGELIMIT)
-          {
-            BADCHANGE = 1;
-            break;
-          }
-          currgearpos = analogRead(A2);
-        }
-        gearchange.write(SGEARMID);
-        while(currgearpos != SPOSGEARMID)
-        {
-          currgearpos = analogRead(A2);
-        }
-        if(BADCHANGE)
-        {
-          GEAR = OLDGEAR;
-        }
-        else
-        {
-          OLDGEAR = gear;
-        }
-      }
-    }
-    else
-    {
-      if (GEARS[OLDGEAR] > GEARS[gear])
-      {
-        gearchange.write(SGEARDOWN);
-        unsigned long int changestart = millis();
-        while(currgearpos != SPOSGEARDOWN)
-        {
-          if((millis() - changestart) > CHANGELIMIT)
-          {
-            BADCHANGE = 1;
-            break;
-          }
-          currgearpos = analogRead(A2);
-        }
-        gearchange.write(SGEARMID);
-        while(currgearpos != SPOSGEARMID)
-        {
-          currgearpos = analogRead(A2);
-        }
-        if(BADCHANGE)
-        {
-          GEAR = OLDGEAR;
-        }
-        else
-        {
-          OLDGEAR = gear;
-        }
-      }
-      else if (GEARS[OLDGEAR] < GEARS[gear])
-      {
-        gearchange.write(SGEARUP);
-        unsigned long int changestart = millis();
-        while(currgearpos != SPOSGEARUP)
-        {
-          if((millis() - changestart) > CHANGELIMIT)
-          {
-            BADCHANGE = 1;
-            break;
-          }
-          currgearpos = analogRead(A2);
-        }
-        gearchange.write(SGEARMID);
-        while(currgearpos != SPOSGEARMID)
-        {
-          currgearpos = analogRead(A2);
-        }
-        if(BADCHANGE)
-        {
-          GEAR = OLDGEAR;
-        }
-        else
-        {
-          OLDGEAR = gear;
-        }
-      }
-    }
-  }
-}
-
 void cleardats()
 {
   Serial.println("Please confirm you want to erase stored data");
@@ -931,70 +932,166 @@ void cleardats()
 
 void neutsearch()
 {
-  Serial.println("Car not started in neutral, searching...");
+  gearchange.writeMicroseconds(SGEARMID);
+  Serial.print("Car not started in neutral");
   int DONE = 0;
-  while(true)
+  CHANGESTART = millis();
+  while (millis() - CHANGESTART < 5000)
   {
-    OLDGEAR = 1;
-    if(Serial.read() == '!')
+    clutch.writeMicroseconds(CSERVOMAX);
+    if (Serial.read() == '!')
     {
-      gearchange.write(SGEARMID);
+      gearchange.writeMicroseconds(SGEARMID);
       Serial.print("Put the car in neutral");
-      while(!digitalRead(12));
+      while (!digitalRead(12));
       DONE = 1;
       break;
     }
-    if(DONE == 1)
+    if (digitalRead(12) == 1)
     {
-      break;
-    }
-    delay(1000);
-    if(digitalRead(12))
-    {
-      break;
-    }
-    gearch(0);
-    if(digitalRead(12))
-    {
-      break;
-    }
-    delay(100);
-    if(digitalRead(12))
-    {
-      break;
-    }
-    delay(500);
-    OLDGEAR = 5;
-    if(Serial.read() == '!')
-    {
-      gearchange.write(SGEARMID);
-      Serial.print("Put the car in neutral");
-      while(!digitalRead(12));
       DONE = 1;
       break;
     }
-    if(DONE == 1)
-    {
-      break;
-    }
-    if(digitalRead(12))
-    {
-      break;
-    }
-    gearch(4);
-    if(digitalRead(12))
-    {
-      break;
-    }
-    delay(100);
-    if(digitalRead(12))
-    {
-      break;
-    }
-    delay(500);
   }
-  gearchange.write(SGEARMID);
-  delay(250);
+  if (DONE == 0)
+  {
+    Serial.println("... searching...");
+  }
+  while (!DONE)
+  {
+    CHANGESTART = millis();
+    while (millis() - CHANGESTART < 750)
+    {
+      if (Serial.read() == '!')
+      {
+        gearchange.writeMicroseconds(SGEARMID);
+        Serial.print("Put the car in neutral");
+        while (!digitalRead(12));
+        DONE = 1;
+        break;
+      }
+      if (digitalRead(12) == 1)
+      {
+        DONE = 1;
+        break;
+      }
+    }
+    if (DONE == 1)
+    {
+      break;
+    }
+    CHANGESTART = millis();
+    gearchange.writeMicroseconds(SGEARHALFUP);
+    while (millis() - CHANGESTART < CHANGELIMIT)
+    {
+      if (Serial.read() == '!')
+      {
+        gearchange.writeMicroseconds(SGEARMID);
+        Serial.print("Put the car in neutral");
+        while (!digitalRead(12));
+        DONE = 1;
+        break;
+      }
+      CURRGEARPOS = analogRead(A2);
+      if (CURRGEARPOS == SPOSGEARHALFUP || CURRGEARPOS == (SPOSGEARHALFUP + 1) || CURRGEARPOS == (SPOSGEARHALFUP - 1))
+      {
+        if (digitalRead(12) == 1)
+        {
+          DONE = 1;
+        }
+        break;
+      }
+    }
+    if (DONE == 1)
+    {
+      break;
+    }
+    CHANGESTART = millis();
+    gearchange.writeMicroseconds(SGEARMID);
+    while (millis() - CHANGESTART < CHANGELIMIT)
+    {
+      CURRGEARPOS = analogRead(A2);
+      if (CURRGEARPOS == SPOSGEARMID || CURRGEARPOS == (SPOSGEARMID + 1) || CURRGEARPOS == (SPOSGEARMID - 1))
+      {
+        if (digitalRead(12) == 1)
+        {
+          DONE = 1;
+        }
+        break;
+      }
+    }
+    if (DONE == 1)
+    {
+      break;
+    }
+    CHANGESTART = millis();
+    while (millis() - CHANGESTART < 750)
+    {
+      if (Serial.read() == '!')
+      {
+        gearchange.writeMicroseconds(SGEARMID);
+        Serial.print("Put the car in neutral");
+        while (!digitalRead(12));
+        DONE = 1;
+        break;
+      }
+      if (digitalRead(12) == 1)
+      {
+        DONE = 1;
+        break;
+      }
+    }
+    if (DONE == 1)
+    {
+      break;
+    }
+    CHANGESTART = millis();
+    gearchange.writeMicroseconds(SGEARDOWN);
+    while (millis() - CHANGESTART < CHANGELIMIT)
+    {
+      if (Serial.read() == '!')
+      {
+        gearchange.writeMicroseconds(SGEARMID);
+        Serial.print("Put the car in neutral");
+        while (!digitalRead(12));
+        DONE = 1;
+        break;
+      }
+      CURRGEARPOS = analogRead(A2);
+      if (CURRGEARPOS == SPOSGEARDOWN || CURRGEARPOS == (SPOSGEARDOWN + 1) || CURRGEARPOS == (SPOSGEARDOWN - 1))
+      {
+        if (digitalRead(12) == 1)
+        {
+          DONE = 1;
+        }
+        break;
+      }
+    }
+    if (DONE == 1)
+    {
+      break;
+    }
+    CHANGESTART = millis();
+    gearchange.writeMicroseconds(SGEARMID);
+    while (millis() - CHANGESTART < CHANGELIMIT)
+    {
+      CURRGEARPOS = analogRead(A2);
+      if (CURRGEARPOS == SPOSGEARMID || CURRGEARPOS == (SPOSGEARMID + 1) || CURRGEARPOS == (SPOSGEARMID - 1))
+      {
+        if (digitalRead(12) == 1)
+        {
+          DONE = 1;
+        }
+        break;
+      }
+    }
+    if (DONE == 1)
+    {
+      break;
+    }
+  }
+  gearchange.writeMicroseconds(SGEARMID);
+  delay(CHANGELIMIT);
   GEAR = 0;
   OLDGEAR = 0;
 }
