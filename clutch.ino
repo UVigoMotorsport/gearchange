@@ -38,7 +38,7 @@ unsigned long int CLUTCHLAST = 0;
 unsigned long int CONFIGLAST = 0;
 int CSERVOMAX = 1000;
 int addr_CSERVOMAX = addr_DIVNUM + sizeof(DIVNUM);
-int CSERVODEAD = 1700;
+int CSERVODEAD = 1300;
 int addr_CSERVODEAD = addr_CSERVOMAX + sizeof(CSERVOMAX);
 int CSERVOMIN = 2000;
 int addr_CSERVOMIN = addr_CSERVODEAD + sizeof(CSERVODEAD);
@@ -83,6 +83,7 @@ int CURRGEARPOS = 0;
 int CHANGEPOINT = 0;
 int CHANGEPOS = 0;
 int FUDGEPOS = 1;
+unsigned long LASTNEUTSAVE = 0;
 
 #define SERVOMAXMAX 2500
 #define SERVOMINMIN 500
@@ -99,6 +100,8 @@ int FUDGEPOS = 1;
 #define CUT 1
 #define BLIP 2
 #define NOBLIP 3
+
+#define NEUTSAVEMAX 5000
 
 void (*reset) (void) = 0;
 
@@ -248,6 +251,7 @@ void loop()
               OLDGEAR = 1;
               CHANGESTAGE = 0;
               GEARCHG = 0;
+              LASTNEUTSAVE = millis();
             }
             else
             {
@@ -260,6 +264,11 @@ void loop()
       RELEASE = 1;
     }
     GEARLAST = millis();
+    if(GEAR == 1 && ((millis() - LASTNEUTSAVE) >= NEUTSAVEMAX))
+    {
+      GEAR++;
+      OLDGEAR++;
+    }
   }
 
   if (AUTO && (CHANGESTAGE == 3))
@@ -325,9 +334,6 @@ void loop()
     {
       CLUTCH = MAX;
       CLUTCHREALPOS = analogRead(A1);
-      Serial.print(CLUTCHREALPOS);
-      Serial.print("|");
-      Serial.println(CREALMAX);
       if (CLUTCHREALPOS <= CREALMAX + FUDGEPOS && CLUTCHREALPOS >= CREALMAX - FUDGEPOS)
       {
         CHANGESTAGE++;
@@ -340,9 +346,6 @@ void loop()
         CLUTCH = MIN;
       }
       CLUTCHREALPOS = analogRead(A1);
-      Serial.print(CLUTCHREALPOS);
-      Serial.print("|");
-      Serial.println(CREALMIN);
       if ((CLUTCHREALPOS <= CREALMIN + FUDGEPOS && CLUTCHREALPOS >= CREALMIN - FUDGEPOS) || BLIPTYPE == NOBLIP)
       {
         CHANGESTAGE = 0;
@@ -647,7 +650,7 @@ int exptoservo(float x)
 {
   x = ((float) (x - MIN) * (1023.0 / (float) (MAX - MIN)) / 1023.0);
 
-  if (x > DEADPER)
+  if (x < 1.0-DEADPER)
   {
     float linx = (x - DEADPER) * (1.0 / (1.0 - DEADPER));
     float frac = ((1 - DIV) * linx) + ((DIV) * exp(linx - 1));
@@ -655,7 +658,7 @@ int exptoservo(float x)
   }
   else
   {
-    return CSERVOMIN;
+    return CSERVOMAX;
   }
 }
 void set()
@@ -1116,15 +1119,12 @@ void set()
                     }
                     break;
                   case 't':
-                    Serial.println("Start cut");
                     starttime = millis();
                     while ((millis() - starttime) < UPBLIPTIME)
                     {
-                      Serial.println(millis() - starttime);
                       digitalWrite(8, 1);
                     }
                     digitalWrite(8, 0);
-                    Serial.println("end cut");
                     break;
                   case 'q':
                     DONEIN2 = 1;
@@ -1167,15 +1167,12 @@ void set()
                     }
                     break;
                   case 't':
-                    Serial.println("Start blip");
                     starttime = millis();
                     while ((millis() - starttime) < DOWNBLIPTIME)
                     {
-                      Serial.println(millis() - starttime);
                       digitalWrite(7, 1);
                     }
                     digitalWrite(7, 0);
-                    Serial.println("End blip");
                     break;
                   case 'q':
                     DONEIN2 = 1;
