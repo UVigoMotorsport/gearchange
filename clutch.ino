@@ -4,6 +4,14 @@
 Servo clutch;
 Servo gearchange;
 
+int AUTO = 0;
+int WANTAUTO = 1;
+int CHANGESTAGE = 0;
+int BLIPTIME = 250;
+unsigned long BLIPDUR = 0;
+int BLIPTYPE = 0;
+int CLUTCHPOS = 0;
+int CLUTCHREALPOS = 0;
 unsigned int OFFSET = 10;
 unsigned char WRITTEN = 0;
 int addr_WRITTEN = OFFSET;
@@ -63,12 +71,18 @@ int addr_SPOSGEARUP = addr_SPOSGEARHALFUP + sizeof(SPOSGEARUP);
 int SPOSGEARDOWN = 100;
 int addr_SPOSGEARDOWN = addr_SPOSGEARUP + sizeof(SPOSGEARUP);
 
+int DOWNBLIPTIME = 250;
+int addr_DOWNBLIPTIME = addr_SPOSGEARDOWN + sizeof(SPOSGEARDOWN);
+int UPBLIPTIME = 250;
+int addr_UPBLIPTIME = addr_DOWNBLIPTIME + sizeof(DOWNBLIPTIME);
+
 int BADCHANGE = 0;
 unsigned long CHANGESTART = 0;
 int CHANGESTARTED = 0;
 int CURRGEARPOS = 0;
 int CHANGEPOINT = 0;
 int CHANGEPOS = 0;
+int FUDGEPOS = 1;
 
 #define SERVOMAXMAX 2500
 #define SERVOMINMIN 500
@@ -80,7 +94,11 @@ int CHANGEPOS = 0;
 #define CSMINMAX 4
 #define GEARUP 1
 #define GEARDOWN 2
-#define CHANGELIMIT 500
+#define CHANGELIMIT 1000
+
+#define CUT 1
+#define BLIP 2
+#define NOBLIP 3
 
 void (*reset) (void) = 0;
 
@@ -95,6 +113,8 @@ void setup()
     EEPROM.put(addr_CSERVOMAX, CSERVOMAX);
     EEPROM.put(addr_CSERVODEAD, CSERVODEAD);
     EEPROM.put(addr_CSERVOMIN, CSERVOMIN);
+    EEPROM.put(addr_CREALMAX, CREALMAX);
+    EEPROM.put(addr_CREALMIN, CREALMIN);
     EEPROM.put(addr_DEADPER, DEADPER);
     EEPROM.put(addr_SGEARMID, SGEARMID);
     EEPROM.put(addr_SGEARHALFDOWN, SGEARHALFDOWN);
@@ -106,6 +126,8 @@ void setup()
     EEPROM.put(addr_SPOSGEARHALFUP, SPOSGEARHALFUP);
     EEPROM.put(addr_SPOSGEARUP, SPOSGEARUP);
     EEPROM.put(addr_SPOSGEARDOWN, SPOSGEARDOWN);
+    EEPROM.put(addr_DOWNBLIPTIME, DOWNBLIPTIME);
+    EEPROM.put(addr_UPBLIPTIME, UPBLIPTIME);
     WRITTEN = 1;
     EEPROM.put(addr_WRITTEN, WRITTEN);
   }
@@ -117,6 +139,8 @@ void setup()
   EEPROM.get(addr_CSERVOMAX, CSERVOMAX);
   EEPROM.get(addr_CSERVODEAD, CSERVODEAD);
   EEPROM.get(addr_CSERVOMIN, CSERVOMIN);
+  EEPROM.get(addr_CREALMAX, CREALMAX);
+  EEPROM.get(addr_CREALMIN, CREALMIN);
   EEPROM.get(addr_DEADPER, DEADPER);
   EEPROM.get(addr_SGEARMID, SGEARMID);
   EEPROM.get(addr_SGEARHALFDOWN, SGEARHALFDOWN);
@@ -128,9 +152,15 @@ void setup()
   EEPROM.get(addr_SPOSGEARHALFUP, SPOSGEARHALFUP);
   EEPROM.get(addr_SPOSGEARUP, SPOSGEARUP);
   EEPROM.get(addr_SPOSGEARDOWN, SPOSGEARDOWN);
+  EEPROM.get(addr_DOWNBLIPTIME, DOWNBLIPTIME);
+  EEPROM.get(addr_UPBLIPTIME, UPBLIPTIME);
   pinMode(12, INPUT);
   pinMode(3, INPUT);
   pinMode(2, INPUT);
+  pinMode(7, OUTPUT);
+  pinMode(8, OUTPUT);
+  digitalWrite(7, 0);
+  digitalWrite(8, 0);
   Serial.begin(57600);
   Serial.println("hello");
   clutch.attach(9);
@@ -150,7 +180,7 @@ void setup()
 
 void loop()
 {
-  if ((millis() - GEARLAST) > 25)
+  if ((millis() - GEARLAST) > 25 && (!CHANGESTAGE))
   {
     if (!GEARCHG)
     {
@@ -167,9 +197,9 @@ void loop()
     {
       if (GEARCHG == 0)
       {
-        GEARCHG = GEARUP;
         if (GEAR < 7)
         {
+          GEARCHG = GEARUP;
           switch (GEAR)
           {
             case 0 :
@@ -181,6 +211,19 @@ void loop()
             default :
               GEAR++;
           }
+          if (AUTO)
+          {
+            CHANGESTAGE++;
+            if (OLDGEAR != 0)
+            {
+              BLIPTYPE = CUT;
+              BLIPTIME = UPBLIPTIME;
+            }
+            else
+            {
+              BLIPTYPE = NOBLIP;
+            }
+          }
         }
       }
       RELEASE = 1;
@@ -189,10 +232,29 @@ void loop()
     {
       if (GEARCHG == 0)
       {
-        GEARCHG = GEARDOWN;
         if (GEAR > 0)
         {
+          GEARCHG = GEARDOWN;
           GEAR--;
+          if (AUTO)
+          {
+            CHANGESTAGE++;
+            if (GEAR == 0)
+            {
+              BLIPTYPE = NOBLIP;
+            }
+            else if (GEAR == 1)
+            {
+              OLDGEAR = 1;
+              CHANGESTAGE = 0;
+              GEARCHG = 0;
+            }
+            else
+            {
+              BLIPTYPE = BLIP;
+              BLIPTIME = DOWNBLIPTIME;
+            }
+          }
         }
       }
       RELEASE = 1;
@@ -200,30 +262,101 @@ void loop()
     GEARLAST = millis();
   }
 
-  if ((millis() - CLUTCHLAST > 30))
+  if (AUTO && (CHANGESTAGE == 3))
   {
-    unsigned short int clutchpos = analogRead(A0);
+    if (BLIPTYPE == CUT)
+    {
+      digitalWrite(8, 1);
+      CHANGESTAGE++;
+      BLIPDUR = millis();
+    }
+    else if (BLIPTYPE == BLIP)
+    {
+      digitalWrite(7, 1);
+      CHANGESTAGE++;
+      BLIPDUR = millis();
+    }
+    else if (BLIPTYPE == NOBLIP)
+    {
+      CHANGESTAGE = 5;
+    }
+    else
+    {
+      CHANGESTAGE = 0;
+    }
+  }
+
+  if (AUTO && (CHANGESTAGE == 4))
+  {
+    if ((millis() - BLIPDUR) >= BLIPTIME)
+    {
+      digitalWrite(8, 0);
+      digitalWrite(7, 0);
+      CHANGESTAGE++;
+    }
+  }
+
+  if ((millis() - CLUTCHLAST > 30) || CHANGESTAGE == 1 || CHANGESTAGE == 5)
+  {
+    CLUTCHPOS = analogRead(A0);
+    CLUTCHREALPOS = analogRead(A1);
     if (!CLUTCHSTART)
     {
-      if (clutchpos >= MAX)
+      if (CLUTCHPOS >= MAX)
       {
         CLUTCHSTART = 1;
+        if (WANTAUTO == 1)
+        {
+          AUTO = 1;
+        }
+      }
+      else if (CHANGESTAGE)
+      {
+        CHANGESTAGE = 0;
+        GEARCHG = 0;
       }
     }
-    else if(BADCHANGE)
+    else if (BADCHANGE)
     {
       CLUTCH = MAX;
       CLUTCHSTART = 0;
     }
-    else
+    else if (CHANGESTAGE == 1)
     {
-      CLUTCH = clutchpos;
+      CLUTCH = MAX;
+      CLUTCHREALPOS = analogRead(A1);
+      Serial.print(CLUTCHREALPOS);
+      Serial.print("|");
+      Serial.println(CREALMAX);
+      if (CLUTCHREALPOS <= CREALMAX + FUDGEPOS && CLUTCHREALPOS >= CREALMAX - FUDGEPOS)
+      {
+        CHANGESTAGE++;
+      }
+    }
+    else if (CHANGESTAGE == 5)
+    {
+      if (BLIPTYPE != NOBLIP)
+      {
+        CLUTCH = MIN;
+      }
+      CLUTCHREALPOS = analogRead(A1);
+      Serial.print(CLUTCHREALPOS);
+      Serial.print("|");
+      Serial.println(CREALMIN);
+      if ((CLUTCHREALPOS <= CREALMIN + FUDGEPOS && CLUTCHREALPOS >= CREALMIN - FUDGEPOS) || BLIPTYPE == NOBLIP)
+      {
+        CHANGESTAGE = 0;
+      }
+    }
+    else if (CHANGESTAGE == 0)
+    {
+      CLUTCH = CLUTCHPOS;
     }
     clutch.writeMicroseconds(exptoservo((float) CLUTCH));
     CLUTCHLAST = millis();
   }
 
-  if (GEARCHG != 0)
+  if (GEARCHG != 0 && !AUTO || CHANGESTAGE == 2 && AUTO)
   {
     CURRGEARPOS = analogRead(A2);
     if (GEARS[GEAR] == GEARS[OLDGEAR])
@@ -263,7 +396,7 @@ void loop()
       if (CHANGESTARTED == 2)
       {
         CURRGEARPOS = analogRead(A2);
-        if (CURRGEARPOS == CHANGEPOS || CURRGEARPOS == (CHANGEPOS + 1) || CURRGEARPOS == (CHANGEPOS - 1))
+        if (CURRGEARPOS <= CHANGEPOS + FUDGEPOS && CURRGEARPOS >= CHANGEPOS - FUDGEPOS)
         {
           CHANGESTARTED = 3;
         }
@@ -276,6 +409,10 @@ void loop()
             BADCHANGE = 1;
             gearchange.writeMicroseconds(SGEARMID);
             GEAR = OLDGEAR;
+            if (CHANGESTAGE)
+            {
+              CHANGESTAGE = 0;
+            }
           }
         }
       }
@@ -288,7 +425,7 @@ void loop()
       if (CHANGESTARTED == 4)
       {
         CURRGEARPOS = analogRead(A2);
-        if (CURRGEARPOS == SPOSGEARMID || CURRGEARPOS == (SPOSGEARMID + 1) || CURRGEARPOS == (SPOSGEARMID - 1))
+        if (CURRGEARPOS <= SPOSGEARMID + FUDGEPOS && CURRGEARPOS >= SPOSGEARMID - FUDGEPOS)
         {
           CHANGESTARTED = 0;
           OLDGEAR = GEAR;
@@ -296,6 +433,10 @@ void loop()
           if (GEARS[GEAR] == 'N' && digitalRead(12) == 1)
           {
             BADCHANGE = 0;
+          }
+          if (CHANGESTAGE)
+          {
+            CHANGESTAGE++;
           }
         }
         else
@@ -307,6 +448,10 @@ void loop()
             BADCHANGE = 1;
             gearchange.writeMicroseconds(SGEARMID);
             GEAR = OLDGEAR;
+            if (CHANGESTAGE)
+            {
+              CHANGESTAGE = 0;
+            }
           }
         }
       }
@@ -318,39 +463,28 @@ void loop()
     TIMELAST = millis();
     Serial.print("Clutch: ");
     int clutchposnow = exptoservo((float) CLUTCH);
-    int clutchrealpos =  analogRead(A1);
-    if (clutchposnow == CSERVOMAX)
-    {
-      CREALMAX = clutchrealpos;
-      int oldmax = 0;
-      EEPROM.get(addr_CREALMAX, oldmax);
-      if (CREALMAX > oldmax + 1 || CREALMAX < oldmax - 1)
-      {
-        EEPROM.put(addr_CREALMAX, CREALMAX);
-      }
-    }
-    if (clutchposnow == CSERVOMIN)
-    {
-      CREALMIN = clutchrealpos;
-      int oldmin = 0;
-      EEPROM.get(addr_CREALMIN, oldmin);
-      if (CREALMIN > oldmin + 1 || CREALMIN < oldmin - 1)
-      {
-        EEPROM.put(addr_CREALMIN, CREALMIN);
-      }
-    }
     Serial.println((clutchposnow - CSERVOMIN) * (1.0 / (CSERVOMAX - CSERVOMIN)));
     Serial.print("Clutch real pos: ");
-    Serial.println((clutchrealpos - CREALMIN) * (1.0 / (CREALMAX - CREALMIN)));
+    Serial.println((CLUTCHREALPOS - CREALMIN) * (1.0 / (CREALMAX - CREALMIN)));
     Serial.print("Gear: [");
-    if (GEARCHG == 0)
+    Serial.print(GEARS[GEAR]);
+    if (GEARCHG == GEARUP)
     {
-      Serial.print(GEARS[GEAR]);
+      Serial.print("/\\");
     }
-    else
+    else if (GEARCHG == GEARDOWN)
+    {
+      Serial.print("\\/");
+    }
+    else if (GEARCHG == 0)
     {
       Serial.print("-");
     }
+    else
+    {
+      Serial.print("X");
+    }
+    Serial.print(GEARS[OLDGEAR]);
     if (BADCHANGE == 1)
     {
       Serial.print("X");
@@ -359,7 +493,12 @@ void loop()
     Serial.print("Percent exp: ");
     Serial.print(DIV * 100.0);
     Serial.println("%");
+    Serial.print("Auto: ");
+    Serial.println(AUTO);
+    Serial.print("Changestage: ");
+    Serial.println(CHANGESTAGE);
     Serial.println("");
+
   }
   if ((millis() - CONFIGLAST) > 100)
   {
@@ -379,6 +518,26 @@ void loop()
     }
     switch (in)
     {
+      case 'a':
+        if (AUTO < 1)
+        {
+          if (CLUTCHSTART)
+          {
+            AUTO++;
+          }
+          else
+          {
+            WANTAUTO = 1;
+          }
+        }
+        break;
+      case 'd':
+        if (AUTO > 0)
+        {
+          AUTO--;
+          WANTAUTO = 0;
+        }
+        break;
       case 'r':
         reset();
         break;
@@ -394,7 +553,7 @@ void loop()
         gearchange.writeMicroseconds(SGEARMID);
         delay(CHANGELIMIT);
         Serial.println("Put the gearbox in neutral");
-        while(digitalRead(12) != 1);
+        while (digitalRead(12) != 1);
         delay(CHANGELIMIT);
         break;
       case 'e' :
@@ -504,6 +663,7 @@ void set()
   int DONE = 0;
   Serial.println("Entering Servo set mode");
   char in = -1;
+  long unsigned starttime = 0;
   while (DONE == 0)
   {
     char in = Serial.read();
@@ -535,9 +695,12 @@ void set()
                     if (CSERVOMAX < SERVOMAXMAX)
                     {
                       CSERVOMAX++;
+                      CREALMAX = analogRead(A1);
                       Serial.print("Current max is ");
                       Serial.print(CSERVOMAX);
                       Serial.println("ms");
+                      Serial.print("Pos: ");
+                      Serial.println(CREALMAX);
                       clutch.writeMicroseconds(CSERVOMAX);
                     }
                     break;
@@ -545,9 +708,12 @@ void set()
                     if (CSERVOMAX > SERVOMINMIN)
                     {
                       CSERVOMAX--;
+                      CREALMAX = analogRead(A1);
                       Serial.print("Current max is ");
                       Serial.print(CSERVOMAX);
                       Serial.println("ms");
+                      Serial.print("Pos: ");
+                      Serial.println(CREALMAX);
                       clutch.writeMicroseconds(CSERVOMAX);
                     }
                     break;
@@ -562,6 +728,7 @@ void set()
                     break;
                 }
               }
+              EEPROM.put(addr_CREALMAX, CREALMAX);
               EEPROM.put(addr_CSERVOMAX, CSERVOMAX);
               Serial.println("Exiting set max");
               break;
@@ -579,9 +746,12 @@ void set()
                     if (CSERVOMIN < SERVOMAXMAX)
                     {
                       CSERVOMIN++;
+                      CREALMIN = analogRead(A1);
                       Serial.print("Current min is ");
                       Serial.print(CSERVOMIN);
                       Serial.println("ms");
+                      Serial.print("Pos: ");
+                      Serial.println(CREALMIN);
                       clutch.writeMicroseconds(CSERVOMIN);
                     }
                     break;
@@ -589,9 +759,12 @@ void set()
                     if (CSERVOMIN > SERVOMINMIN)
                     {
                       CSERVOMIN--;
+                      CREALMIN = analogRead(A1);
                       Serial.print("Current min is ");
                       Serial.print(CSERVOMIN);
-                      Serial.println("ms");
+                      Serial.print("ms ");
+                      Serial.print("Pos: ");
+                      Serial.println(CREALMIN);
                       clutch.writeMicroseconds(CSERVOMIN);
                     }
                     break;
@@ -605,6 +778,7 @@ void set()
                     break;
                 }
               }
+              EEPROM.put(addr_CREALMIN, CREALMIN);
               EEPROM.put(addr_CSERVOMIN, CSERVOMIN);
               Serial.println("Exiting set min");
               break;
@@ -905,6 +1079,127 @@ void set()
           }
         }
         Serial.println("Exiting gearchange set mode");
+        break;
+      case 'b':
+        Serial.println("Entering blip set mode");
+        while (DONEIN == 0)
+        {
+          int DONEIN2 = 0;
+          in = Serial.read();
+          switch (in)
+          {
+            case 'u' :
+              Serial.print("Current cut time is ");
+              Serial.print(UPBLIPTIME);
+              Serial.println("ms");
+              while (DONEIN2 == 0)
+              {
+                in = Serial.read();
+                switch (in)
+                {
+                  case '+':
+                    if (UPBLIPTIME < 500)
+                    {
+                      UPBLIPTIME++;
+                      Serial.print("Current cut time is ");
+                      Serial.print(UPBLIPTIME);
+                      Serial.println("ms");
+                    }
+                    break;
+                  case '-':
+                    if (UPBLIPTIME > 0)
+                    {
+                      UPBLIPTIME--;
+                      Serial.print("Current cut time is ");
+                      Serial.print(UPBLIPTIME);
+                      Serial.println("ms");
+                    }
+                    break;
+                  case 't':
+                    Serial.println("Start cut");
+                    starttime = millis();
+                    while ((millis() - starttime) < UPBLIPTIME)
+                    {
+                      Serial.println(millis() - starttime);
+                      digitalWrite(8, 1);
+                    }
+                    digitalWrite(8, 0);
+                    Serial.println("end cut");
+                    break;
+                  case 'q':
+                    DONEIN2 = 1;
+                    break;
+                  case '!':
+                    DONEIN2 = 1;
+                    DONEIN = 1;
+                    DONE = 1;
+                    break;
+                }
+              }
+              EEPROM.put(addr_UPBLIPTIME, UPBLIPTIME);
+              Serial.println("Exiting set cut time");
+              break;
+            case 'd' :
+              Serial.print("Current blip time is ");
+              Serial.print(DOWNBLIPTIME);
+              Serial.println("ms");
+              while (DONEIN2 == 0)
+              {
+                in = Serial.read();
+                switch (in)
+                {
+                  case '+':
+                    if (DOWNBLIPTIME < 500)
+                    {
+                      DOWNBLIPTIME++;
+                      Serial.print("Current blip time is ");
+                      Serial.print(DOWNBLIPTIME);
+                      Serial.println("ms");
+                    }
+                    break;
+                  case '-':
+                    if (DOWNBLIPTIME > 0)
+                    {
+                      DOWNBLIPTIME--;
+                      Serial.print("Current blip time is ");
+                      Serial.print(DOWNBLIPTIME);
+                      Serial.println("ms");
+                    }
+                    break;
+                  case 't':
+                    Serial.println("Start blip");
+                    starttime = millis();
+                    while ((millis() - starttime) < DOWNBLIPTIME)
+                    {
+                      Serial.println(millis() - starttime);
+                      digitalWrite(7, 1);
+                    }
+                    digitalWrite(7, 0);
+                    Serial.println("End blip");
+                    break;
+                  case 'q':
+                    DONEIN2 = 1;
+                    break;
+                  case '!':
+                    DONEIN2 = 1;
+                    DONEIN = 1;
+                    DONE = 1;
+                    break;
+                }
+              }
+              EEPROM.put(addr_DOWNBLIPTIME, DOWNBLIPTIME);
+              Serial.println("Exiting set blip time");
+              break;
+            case 'q' :
+              DONEIN = 1;
+              break;
+            case '!' :
+              DONEIN = 1;
+              DONE = 1;
+              break;
+          }
+        }
+        Serial.println("Exiting blip set mode");
         break;
     }
 
