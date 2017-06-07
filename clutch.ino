@@ -221,10 +221,12 @@ void loop()
             {
               BLIPTYPE = CUT;
               BLIPTIME = UPBLIPTIME;
+              digitalWrite(8, 1);
             }
             else
             {
               BLIPTYPE = NOBLIP;
+              digitalWrite(8, 1);
             }
           }
         }
