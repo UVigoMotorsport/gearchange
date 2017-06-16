@@ -9,16 +9,16 @@ All settings that are changable save to EEPROM and are persistant throughout res
 The gearchange leans heavily on the Servo, Serial and EEPROM libraries of Arduino. These should be portable to most ATMegas but care should be taken.
 
 ## Wiring
-**D2**: Gear up button, put a pull down resistor
-**D3**: Gear down button, put a pull down resistor
-**D6**: Gearchange servo output
-**D7**: Blip output to ETC (provisional)
-**D8**: Cut output to ETC (provisional)
-**D9**: Clutch servo output
-**D12**: Neutral switch input, put a pull down resistor
-**A0**: Potientometer input for clutch control
-**A1**: Clutch position input from servo
-**A2**: Gearchange position input from servo
+**D2**: Gear up button, put a pull down resistor  
+**D3**: Gear down button, put a pull down resistor  
+**D6**: Gearchange servo output  
+**D7**: Blip output to ETC (provisional)  
+**D8**: Cut output to ETC (provisional)  
+**D9**: Clutch servo output  
+**D12**: Neutral switch input, put a pull down resistor  
+**A0**: Potientometer input for clutch control  
+**A1**: Clutch position input from servo  
+**A2**: Gearchange position input from servo  
 
 ## Normal use
 When the gearbox turns on, it will check if the gearbox is in neutral. If not, it first searches for neutral by changing down, changing halfway up, and continuing this pattern until it finds neutral. If you prefer to put the gearbox in neutral yourself, send a "!" and put the gearbox in neutral. The gearbox will then be ready to use.
