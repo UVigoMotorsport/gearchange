@@ -58,45 +58,45 @@ Use the arduino serial monitor or any other qualified RS-232 terminal emulator a
 - **s**: Enter set mode.
 
 ### Set mode
--**q**: Quit set mode.
--**p**: Enter clutch input lever mode.
- -#### Clutch input lever mode
+- **q**: Quit set mode.
+- **p**: Enter clutch input lever mode.
+ - #### Clutch input lever mode
   1. Put the lever to one maximum, send **d**.
   2. Put the lever to the minimum, send **d**.
   3. Put the lever to the other maximum, send **d** a final time.
  - If both maximums have voltages above or both below the minimum, both will be set to the value of the first maximum
--**c**: Clutch servo set mode.
- -#### Clutch servo set mode
- -Universal commands
-  -**+**: Increase the microseconds. More rotates the servo more in a clockwise direction (normally). The limit of the servo is usually 2000ms, the software limits you to 2500.
-  -**-**: Decrease the microseconds. Less rotates the servo more in a counter-clockwise direction (normally). The limit of the servo is usually 1000ms, the software limits you to 500.
-  -**q**: Quit this specific setting and go back up a level. Changes are saved.
-  -**!**: No matter the level, quit Set mode and go back to normal mode. Changes are saved.
- -Specific settings
-  -**+**: Maximum declutched position. This is where the lever on the steering wheel would be all the way pulled.
-  -**-**: Minimum declutched position. This is when nobody is touching the lever.
-  -**d**: Deadzone position. This is the initial position the servo jumps to when you leave the lever's deadzone.
--**g**: Gearchange servo set mode.
- -#### Gearchange servo set mode
- -Universal commands
-  -**+**: Increase the microseconds. More rotates the servo more in a clockwise direction (normally). The limit of the servo is usually 2000ms, the software limits you to 2500.
-  -**-**: Decrease the microseconds. Less rotates the servo more in a counter-clockwise direction (normally). The limit of the servo is usually 1000ms, the software limits you to 500.
-  -**q**: Quit this specific setting and go back up a level. Changes are saved.
-  -**!**: No matter the level, quit Set mode and go back to normal mode. Changes are saved.
- -Specific settings
-  -**+**: Upchange
-  -**-**: Downchange
-  -**u**: Halfup - from 1 to N.
-  -**d**: Halfdown - from 2 to N.
-  -**m**: Midpoint - This is where the servo should be normally, when there is no gearchange currently in progress.
--**b**: Blip set mode (sets length of blip or cut)
- -#### Blip set mode
- -Universal commands
-  -**+**: Increase the microseconds. More rotates the servo more in a clockwise direction (normally). The limit of the servo is usually 2000ms, the software limits you to 2500.
-  -**-**: Decrease the microseconds. Less rotates the servo more in a counter-clockwise direction (normally). The limit of the servo is usually 1000ms, the software limits you to 500.
-  -**t**: Sends a blip or cut for the amount of time set.
-  -**q**: Quit this specific setting and go back up a level. Changes are saved.
-  -**!**: No matter the level, quit Set mode and go back to normal mode. Changes are saved.
- -Specific settings
-  -**u**: Set the amount of time to cut the throttle on upchange
-  -**d**: Set the amount of time to blip on downchange
+- **c**: Clutch servo set mode.
+ - #### Clutch servo set mode
+ - Universal commands
+  - **+**: Increase the microseconds. More rotates the servo more in a clockwise direction (normally). The limit of the servo is usually 2000ms, the software limits you to 2500.
+  - **-**: Decrease the microseconds. Less rotates the servo more in a counter-clockwise direction (normally). The limit of the servo is usually 1000ms, the software limits you to 500.
+  - **q**: Quit this specific setting and go back up a level. Changes are saved.
+  - **!**: No matter the level, quit Set mode and go back to normal mode. Changes are saved.
+ - Specific settings
+  - **+**: Maximum declutched position. This is where the lever on the steering wheel would be all the way pulled.
+  - **-**: Minimum declutched position. This is when nobody is touching the lever.
+  - **d**: Deadzone position. This is the initial position the servo jumps to when you leave the lever's deadzone.
+- **g**: Gearchange servo set mode.
+ - #### Gearchange servo set mode
+ - Universal commands
+  - **+**: Increase the microseconds. More rotates the servo more in a clockwise direction (normally). The limit of the servo is usually 2000ms, the software limits you to 2500.
+  - **-**: Decrease the microseconds. Less rotates the servo more in a counter-clockwise direction (normally). The limit of the servo is usually 1000ms, the software limits you to 500.
+  - **q**: Quit this specific setting and go back up a level. Changes are saved.
+  - **!**: No matter the level, quit Set mode and go back to normal mode. Changes are saved.
+ - Specific settings
+  - **+**: Upchange
+  - **-**: Downchange
+  - **u**: Halfup - from 1 to N.
+  - **d**: Halfdown - from 2 to N.
+  - **m**: Midpoint - This is where the servo should be normally, when there is no gearchange currently in progress.
+- **b**: Blip set mode (sets length of blip or cut)
+ - #### Blip set mode
+ - Universal commands
+  - **+**: Increase the microseconds. More rotates the servo more in a clockwise direction (normally). The limit of the servo is usually 2000ms, the software limits you to 2500.
+  - **-**: Decrease the microseconds. Less rotates the servo more in a counter-clockwise direction (normally). The limit of the servo is usually 1000ms, the software limits you to 500.
+  - **t**: Sends a blip or cut for the amount of time set.
+  - **q**: Quit this specific setting and go back up a level. Changes are saved.
+  - **!**: No matter the level, quit Set mode and go back to normal mode. Changes are saved.
+ - Specific settings
+  - **u**: Set the amount of time to cut the throttle on upchange
+  - **d**: Set the amount of time to blip on downchange
