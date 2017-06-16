@@ -60,11 +60,11 @@ Use the arduino serial monitor or any other qualified RS-232 terminal emulator a
 ### Set mode
 - **q**: Quit set mode.
 - **p**: Enter clutch input lever mode.
- - #### Clutch input lever mode
+ * #### Clutch input lever mode
   1. Put the lever to one maximum, send **d**.
   2. Put the lever to the minimum, send **d**.
   3. Put the lever to the other maximum, send **d** a final time.
- - If both maximums have voltages above or both below the minimum, both will be set to the value of the first maximum
+ * If both maximums have voltages above or both below the minimum, both will be set to the value of the first maximum
 - **c**: Clutch servo set mode.
  - #### Clutch servo set mode
  - Universal commands
