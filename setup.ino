@@ -1,0 +1,80 @@
+void setup()
+{
+  EEPROM.get(addr_WRITTEN, WRITTEN);
+  if (WRITTEN != 1)
+  {
+    EEPROM.put(addr_MIN, MIN);
+    EEPROM.put(addr_MAX, MAX);
+    EEPROM.put(addr_DIVNUM, DIVNUM);
+    EEPROM.put(addr_CSERVOMAX, CSERVOMAX);
+    EEPROM.put(addr_CSERVODEAD, CSERVODEAD);
+    EEPROM.put(addr_CSERVOMIN, CSERVOMIN);
+    EEPROM.put(addr_CREALMAX, CREALMAX);
+    EEPROM.put(addr_CREALMIN, CREALMIN);
+    EEPROM.put(addr_DEADPER, DEADPER);
+    EEPROM.put(addr_SGEARMID, SGEARMID);
+    EEPROM.put(addr_SGEARHALFDOWN, SGEARHALFDOWN);
+    EEPROM.put(addr_SGEARHALFUP, SGEARHALFUP);
+    EEPROM.put(addr_SGEARUP, SGEARUP);
+    EEPROM.put(addr_SGEARDOWN, SGEARDOWN);
+    EEPROM.put(addr_SPOSGEARMID, SPOSGEARMID);
+    EEPROM.put(addr_SPOSGEARHALFDOWN, SPOSGEARHALFDOWN);
+    EEPROM.put(addr_SPOSGEARHALFUP, SPOSGEARHALFUP);
+    EEPROM.put(addr_SPOSGEARUP, SPOSGEARUP);
+    EEPROM.put(addr_SPOSGEARDOWN, SPOSGEARDOWN);
+    EEPROM.put(addr_DOWNBLIPTIME, DOWNBLIPTIME);
+    EEPROM.put(addr_UPBLIPTIME, UPBLIPTIME);
+    EEPROM.put(addr_MAX2, MAX2);
+    EEPROM.put(addr_EXPFACTOR, EXPFACTOR);
+    WRITTEN = 1;
+    EEPROM.put(addr_WRITTEN, WRITTEN);
+  }
+  EEPROM.get(addr_MIN, MIN);
+  EEPROM.get(addr_MAX, MAX);
+  CLUTCH = CLUTCHFAKEMAX;
+  EEPROM.get(addr_DIVNUM, DIVNUM);
+  DIV = (float) DIVNUM / 10.0;
+  EEPROM.get(addr_CSERVOMAX, CSERVOMAX);
+  EEPROM.get(addr_CSERVODEAD, CSERVODEAD);
+  EEPROM.get(addr_CSERVOMIN, CSERVOMIN);
+  EEPROM.get(addr_CREALMAX, CREALMAX);
+  EEPROM.get(addr_CREALMIN, CREALMIN);
+  EEPROM.get(addr_DEADPER, DEADPER);
+  EEPROM.get(addr_SGEARMID, SGEARMID);
+  EEPROM.get(addr_SGEARHALFDOWN, SGEARHALFDOWN);
+  EEPROM.get(addr_SGEARHALFUP, SGEARHALFUP);
+  EEPROM.get(addr_SGEARUP, SGEARUP);
+  EEPROM.get(addr_SGEARDOWN, SGEARDOWN);
+  EEPROM.get(addr_SPOSGEARMID, SPOSGEARMID);
+  EEPROM.get(addr_SPOSGEARHALFDOWN, SPOSGEARHALFDOWN);
+  EEPROM.get(addr_SPOSGEARHALFUP, SPOSGEARHALFUP);
+  EEPROM.get(addr_SPOSGEARUP, SPOSGEARUP);
+  EEPROM.get(addr_SPOSGEARDOWN, SPOSGEARDOWN);
+  EEPROM.get(addr_DOWNBLIPTIME, DOWNBLIPTIME);
+  EEPROM.get(addr_UPBLIPTIME, UPBLIPTIME);
+  EEPROM.get(addr_MAX2, MAX2);
+  EEPROM.get(addr_EXPFACTOR, EXPFACTOR);
+  pinMode(12, INPUT);
+  pinMode(3, INPUT);
+  pinMode(2, INPUT);
+  pinMode(7, OUTPUT);
+  pinMode(8, OUTPUT);
+  digitalWrite(7, 0);
+  digitalWrite(8, 0);
+  Serial.begin(57600);
+  Serial.println("hello");
+  clutch.attach(9);
+  clutch.writeMicroseconds(CSERVOMAX);
+  gearchange.attach(6);
+  gearchange.writeMicroseconds(SGEARMID);
+  delay(250);
+  if (digitalRead(12) == 1)
+  {
+    OLDGEAR = 0;
+  }
+  else
+  {
+    neutsearch();
+  }
+  
+}
