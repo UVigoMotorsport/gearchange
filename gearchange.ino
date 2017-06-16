@@ -408,7 +408,6 @@ void loop()
         }
         EEPROM.put(addr_DEADPER, DEADPER);
         break;
-
       case 'o':
         if (EXPFACTOR < 10)
         {
