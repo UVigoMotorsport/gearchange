@@ -96,8 +96,8 @@ If both maximums have voltages above or both below the minimum, both will be set
 **b**: Blip set mode (sets length of blip or cut)  
 #### Blip set mode
 ##### Universal commands
-**+**: Increase the microseconds. More rotates the servo more in a clockwise direction (normally). The limit of the servo is usually 2000ms, the software limits you to 2500.  
-**-**: Decrease the microseconds. Less rotates the servo more in a counter-clockwise direction (normally). The limit of the servo is usually 1000ms, the software limits you to 500.  
+**+**: Increase the milliseconds. This increases the length of time the throttle is shut or open. Limit is 500ms.  
+**-**: Decrease the milliseconds. This decreases the length of time the throttle is shut or open. Limit is 0ms.
 **t**: Sends a blip or cut for the amount of time set.  
 **q**: Quit this specific setting and go back up a level. Changes are saved.  
 **!**: No matter the level, quit Set mode and go back to normal mode. Changes are saved.  
