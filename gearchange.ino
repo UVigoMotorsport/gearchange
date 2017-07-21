@@ -67,6 +67,10 @@ void loop()
             {
               BLIPTYPE = NOBLIP;
             }
+            else if (GEAR == 1)
+            {
+              GEARCHG = 0;
+            }
             else
             {
               BLIPTYPE = BLIP;
@@ -77,7 +81,6 @@ void loop()
           {
             OLDGEAR = 1;
             CHANGESTAGE = 0;
-            GEARCHG = 0;
             LASTNEUTSAVE = millis();
           }
         }
@@ -185,7 +188,6 @@ void loop()
     CURRGEARPOS = analogRead(A2);
     if (GEARS[GEAR] == GEARS[OLDGEAR])
     {
-
       GEARCHG = 0;
     }
     else
@@ -220,7 +222,8 @@ void loop()
       if (CHANGESTARTED == 2)
       {
         CURRGEARPOS = analogRead(A2);
-        if (CURRGEARPOS <= CHANGEPOS + FUDGEPOS && CURRGEARPOS >= CHANGEPOS - FUDGEPOS)
+        Serial.println(CURRGEARPOS);
+        if ((CURRGEARPOS <= CHANGEPOS + FUDGEPOS && CURRGEARPOS >= CHANGEPOS - FUDGEPOS)  && (millis() - CHANGESTART > MINCHANGE))
         {
           CHANGESTARTED = 3;
         }
@@ -249,7 +252,8 @@ void loop()
       if (CHANGESTARTED == 4)
       {
         CURRGEARPOS = analogRead(A2);
-        if (CURRGEARPOS <= SPOSGEARMID + FUDGEPOS && CURRGEARPOS >= SPOSGEARMID - FUDGEPOS)
+        Serial.println(CURRGEARPOS);
+        if ((CURRGEARPOS <= SPOSGEARMID + FUDGEPOS && CURRGEARPOS >= SPOSGEARMID - FUDGEPOS) && (millis() - CHANGESTART > MINCHANGE))
         {
           CHANGESTARTED = 0;
           OLDGEAR = GEAR;

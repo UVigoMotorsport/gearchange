@@ -6,6 +6,7 @@ void (*reset) (void) = 0;
 Servo clutch;
 Servo gearchange;
 
+int MINCHANGE = 250;
 int AUTO = 0;
 int WANTAUTO = 0;
 int CHANGESTAGE = 0;

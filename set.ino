@@ -18,28 +18,28 @@ void set()
         in = 0;
         Serial.println("Pull the lever to one max and press d");
         in = Serial.read();
-        while(in != 'd')
+        while (in != 'd')
         {
           in = Serial.read();
         }
         MAX = analogRead(A0);
         Serial.println("Pull the lever to min and press d");
         in = Serial.read();
-        while(in != 'd')
+        while (in != 'd')
         {
           in = Serial.read();
         }
         MIN = analogRead(A0);
         Serial.println("Pull the lever to other max and press d");
         in = Serial.read();
-        while(in != 'd')
+        while (in != 'd')
         {
           in = Serial.read();
         }
         MAX2 = analogRead(A0);
         EEPROM.put(addr_MIN, MIN);
         EEPROM.put(addr_MAX, MAX);
-        if((MAX > MIN && MAX2 > MIN) || (MAX < MIN && MAX2 < MIN))
+        if ((MAX > MIN && MAX2 > MIN) || (MAX < MIN && MAX2 < MIN))
         {
           MAX2 = MAX;
         }
@@ -234,6 +234,9 @@ void set()
                       Serial.print("Current upchange is ");
                       Serial.print(SGEARUP);
                       Serial.println("ms");
+                      SPOSGEARUP = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARUP);
                       gearchange.writeMicroseconds(SGEARUP);
                     }
                     break;
@@ -244,6 +247,9 @@ void set()
                       Serial.print("Current upchange is ");
                       Serial.print(SGEARUP);
                       Serial.println("ms");
+                      SPOSGEARUP = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARUP);
                       gearchange.writeMicroseconds(SGEARUP);
                     }
                     break;
@@ -258,7 +264,6 @@ void set()
                 }
               }
               EEPROM.put(addr_SGEARUP, SGEARUP);
-              SPOSGEARUP = analogRead(A2);
               EEPROM.put(addr_SPOSGEARUP, SPOSGEARUP);
               Serial.println("Exiting set upchange");
               break;
@@ -279,6 +284,9 @@ void set()
                       Serial.print("Current downchange is ");
                       Serial.print(SGEARDOWN);
                       Serial.println("ms");
+                      SPOSGEARDOWN = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARDOWN);
                       gearchange.writeMicroseconds(SGEARDOWN);
                     }
                     break;
@@ -289,6 +297,9 @@ void set()
                       Serial.print("Current downchange is ");
                       Serial.print(SGEARDOWN);
                       Serial.println("ms");
+                      SPOSGEARDOWN = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARDOWN);
                       gearchange.writeMicroseconds(SGEARDOWN);
                     }
                     break;
@@ -303,7 +314,6 @@ void set()
                 }
               }
               EEPROM.put(addr_SGEARDOWN, SGEARDOWN);
-              SPOSGEARDOWN = analogRead(A2);
               EEPROM.put(addr_SPOSGEARDOWN, SPOSGEARDOWN);
               Serial.println("Exiting set downchange");
               break;
@@ -324,6 +334,9 @@ void set()
                       Serial.print("Current halfup is ");
                       Serial.print(SGEARHALFUP);
                       Serial.println("ms");
+                      SPOSGEARHALFUP = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARHALFUP);
                       gearchange.writeMicroseconds(SGEARHALFUP);
                     }
                     break;
@@ -334,6 +347,9 @@ void set()
                       Serial.print("Current halfup is ");
                       Serial.print(SGEARHALFUP);
                       Serial.println("ms");
+                      SPOSGEARHALFUP = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARHALFUP);
                       gearchange.writeMicroseconds(SGEARHALFUP);
                     }
                     break;
@@ -369,6 +385,9 @@ void set()
                       Serial.print("Current halfdown is ");
                       Serial.print(SGEARHALFDOWN);
                       Serial.println("ms");
+                      SPOSGEARHALFDOWN = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARHALFDOWN);
                       gearchange.writeMicroseconds(SGEARHALFDOWN);
                     }
                     break;
@@ -379,6 +398,9 @@ void set()
                       Serial.print("Current halfdown is ");
                       Serial.print(SGEARHALFDOWN);
                       Serial.println("ms");
+                      SPOSGEARHALFDOWN = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARHALFDOWN);
                       gearchange.writeMicroseconds(SGEARHALFDOWN);
                     }
                     break;
@@ -393,7 +415,6 @@ void set()
                 }
               }
               EEPROM.put(addr_SGEARHALFDOWN, SGEARHALFDOWN);
-              SPOSGEARHALFDOWN = analogRead(A2);
               EEPROM.put(addr_SPOSGEARHALFDOWN, SPOSGEARHALFDOWN);
               Serial.println("Exiting set halfdown");
               break;
@@ -414,6 +435,9 @@ void set()
                       Serial.print("Current midpoint is ");
                       Serial.print(SGEARMID);
                       Serial.println("ms");
+                      SPOSGEARMID = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARMID);
                       gearchange.writeMicroseconds(SGEARMID);
                     }
                     break;
@@ -424,6 +448,9 @@ void set()
                       Serial.print("Current midpoint is ");
                       Serial.print(SGEARMID);
                       Serial.println("ms");
+                      SPOSGEARMID = analogRead(A2);
+                      Serial.print("Pos: ");
+                      Serial.println(SPOSGEARMID);
                       gearchange.writeMicroseconds(SGEARMID);
                     }
                     break;
@@ -438,7 +465,6 @@ void set()
                 }
               }
               EEPROM.put(addr_SGEARMID, SGEARMID);
-              SPOSGEARMID = analogRead(A2);
               EEPROM.put(addr_SPOSGEARMID, SPOSGEARMID);
               Serial.println("Exiting set midpoint");
               break;
