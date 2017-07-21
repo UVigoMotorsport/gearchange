@@ -67,18 +67,18 @@ void loop()
             {
               BLIPTYPE = NOBLIP;
             }
-            else if (GEAR == 1)
-            {
-              OLDGEAR = 1;
-              CHANGESTAGE = 0;
-              GEARCHG = 0;
-              LASTNEUTSAVE = millis();
-            }
             else
             {
               BLIPTYPE = BLIP;
               BLIPTIME = DOWNBLIPTIME;
             }
+          }
+          if (GEAR == 1)
+          {
+            OLDGEAR = 1;
+            CHANGESTAGE = 0;
+            GEARCHG = 0;
+            LASTNEUTSAVE = millis();
           }
         }
       }
